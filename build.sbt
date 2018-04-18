@@ -56,12 +56,18 @@ scalacOptions in (Compile, console) --= Seq("-Ywarn-unused:imports", "-Xfatal-wa
 
 libraryDependencies ++= {
   val scalaTestV = "3.0.4"
+  val http4sV ="0.18.0"
   Seq(
     "org.scalatest"     %% "scalatest"            % scalaTestV % "test",
-    "com.pauldijou"     %% "jwt-core"             % "0.14.1"
+    "com.pauldijou"     %% "jwt-core"             % "0.14.1",
+    "org.http4s" %% "http4s-dsl" % http4sV
   )
 }
 
 scalaVersion in ThisBuild := scalaV
+
+resolvers += Resolver.sonatypeRepo("releases")
+
+addCompilerPlugin("org.spire-math" %% "kind-projector" % "0.9.6")
 
 publishTo := Some(Resolver.file("releases", new File("releases")))

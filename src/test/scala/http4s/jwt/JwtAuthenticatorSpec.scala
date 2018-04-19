@@ -2,10 +2,12 @@ package http4s.jwt
 
 import cats.effect.IO
 import io.circe.parser._
+import org.http4s.Credentials.Token
 import org.http4s.dsl.io._
-import org.http4s.{HttpService, Request, Status}
+import org.http4s.headers.Authorization
+import org.http4s.{AuthScheme, HttpService, Request, Status}
 import org.scalatest.{EitherValues, Inside, Matchers, WordSpec}
-import pdi.jwt.{Jwt, JwtAlgorithm}
+import pdi.jwt.{Jwt, JwtAlgorithm, JwtClaim}
 
 class JwtAuthenticatorSpec extends WordSpec with Matchers with JwtAuthenticator with Inside with EitherValues {
 
@@ -30,6 +32,30 @@ class JwtAuthenticatorSpec extends WordSpec with Matchers with JwtAuthenticator 
 
         response.status shouldEqual Status.Unauthorized
         wasCalled should not be true
+      }
+    }
+
+    "using valid jwt token" should {
+      "return NoContent" in new ServiceScope {
+        val token = generateToken()
+        val request              = Request[IO]().putHeaders(Authorization(Token(AuthScheme.Bearer, token)))
+        val authenticatedService = jwtAuthenticate(dummyService)
+        val response             = authenticatedService.orNotFound.run(request).unsafeRunSync()
+
+        response.status shouldEqual Status.NoContent
+        wasCalled shouldBe true
+      }
+    }
+
+    "using wrong jwt token" should {
+      "return NoContent" in new ServiceScope {
+        val token = Jwt.encode(JwtClaim())
+        val request              = Request[IO]().putHeaders(Authorization(Token(AuthScheme.Bearer, token)))
+        val authenticatedService = jwtAuthenticate(dummyService)
+        val response             = authenticatedService.orNotFound.run(request).unsafeRunSync()
+
+        response.status shouldEqual Status.Unauthorized
+        wasCalled shouldBe false
       }
     }
   }

@@ -18,11 +18,31 @@ jobs:
           - v1-dependencies-{{ checksum "build.sbt" }}
           - v1-dependencies-
 
-      - run: cat /dev/null | sbt test:compile
+      - run:
+          name: Compile
+          command: cat /dev/null | sbt test:compile
 
       - save_cache:
           paths:
-            - ~/.m2
+            - "~/.sbt"
+            - "target/resolution-cache"
+            - "target/streams"
+            - "project/target/resolution-cache"
+            - "project/target/streams"
           key: v1-dependencies--{{ checksum "build.sbt" }}
 
-      - run: cat /dev/null | sbt test:test
+      - run:
+          name: Run tests
+          command: cat /dev/null | sbt test:test
+
+      - run:
+          name: Save test results
+          command: |
+            mkdir -p ~/junit/
+            find . -type f -regex ".*/build/test-results/.*xml" -exec cp {} ~/junit/ \;
+          when: always
+
+      - store_test_results:
+          path: ~/junit
+      - store_artifacts:
+          path: ~/junit

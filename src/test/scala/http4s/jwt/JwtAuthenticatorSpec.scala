@@ -26,9 +26,9 @@ class JwtAuthenticatorSpec extends WordSpec with Matchers with JwtAuthenticator 
   "JwtAuthenticator" when {
     "using no jwt token" should {
       "return Unauthorized" in new ServiceScope {
-        val request              = Request[IO]()
+        val request = Request[IO]()
         val authenticatedService = jwtAuthenticate(dummyService)
-        val response             = authenticatedService.orNotFound.run(request).unsafeRunSync()
+        val response = authenticatedService.orNotFound.run(request).unsafeRunSync()
 
         response.status shouldEqual Status.Unauthorized
         wasCalled should not be true
@@ -38,9 +38,9 @@ class JwtAuthenticatorSpec extends WordSpec with Matchers with JwtAuthenticator 
     "using valid jwt token" should {
       "return NoContent" in new ServiceScope {
         val token = generateToken()
-        val request              = Request[IO]().putHeaders(Authorization(Token(AuthScheme.Bearer, token)))
+        val request = Request[IO]().putHeaders(Authorization(Token(AuthScheme.Bearer, token)))
         val authenticatedService = jwtAuthenticate(dummyService)
-        val response             = authenticatedService.orNotFound.run(request).unsafeRunSync()
+        val response = authenticatedService.orNotFound.run(request).unsafeRunSync()
 
         response.status shouldEqual Status.NoContent
         wasCalled shouldBe true
@@ -50,12 +50,24 @@ class JwtAuthenticatorSpec extends WordSpec with Matchers with JwtAuthenticator 
     "using wrong jwt token" should {
       "return NoContent" in new ServiceScope {
         val token = Jwt.encode(JwtClaim())
-        val request              = Request[IO]().putHeaders(Authorization(Token(AuthScheme.Bearer, token)))
+        val request = Request[IO]().putHeaders(Authorization(Token(AuthScheme.Bearer, token)))
         val authenticatedService = jwtAuthenticate(dummyService)
-        val response             = authenticatedService.orNotFound.run(request).unsafeRunSync()
+        val response = authenticatedService.orNotFound.run(request).unsafeRunSync()
 
         response.status shouldEqual Status.Unauthorized
         wasCalled shouldBe false
+      }
+    }
+  }
+
+  "JWT Token extractor" when {
+    "given a valid jwt token" should {
+      "return the extracted token" in {
+        val token = generateToken()
+        val request = Request[IO]().putHeaders(Authorization(Token(AuthScheme.Bearer, token)))
+
+        val extractedToken = extractJwtToken(request).unsafeRunSync()
+        token shouldEqual extractedToken
       }
     }
   }

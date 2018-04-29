@@ -21,24 +21,27 @@ trait JwtAuthenticator {
   }
 
   def jwtAuthenticate(service: HttpService[IO]): HttpService[IO] = Kleisli { req: Request[IO] =>
-    val response = for {
-      credentials <- getCredentials(req)
-      token       <- getJwtToken(credentials)
-      _           <- validate(token)
-    } yield service(req)
+    val validateRequest = getCredentials andThen getJwtToken andThen validate
+    val response = validateRequest(req).map(_ => service(req))
 
     response.getOrElse(Response[IO](status = Status.Unauthorized).pure[OptionT[IO, ?]])
   }
 
-  private def getCredentials: Request[IO] => Option[Credentials] =
-    req => req.headers.get(Authorization).map(_.credentials)
-
-  private def getJwtToken: Credentials => Option[String] = {
-    case Token(AuthScheme.Bearer, token) => token.some
-    case _                               => none[String]
+  def extractJwtToken: Request[IO] => IO[String] = req => IO {
+    (getCredentials andThen getJwtToken).run(req).get
   }
 
-  private def validate: String => Option[Unit] =
-    token => Jwt.isValid(token, secret, List(JwtAlgorithm.HS256)).guard[Option]
+  private def getCredentials: Kleisli[Option, Request[IO], Credentials] = Kleisli {
+    req => req.headers.get(Authorization).map(_.credentials)
+  }
+
+  private def getJwtToken: Kleisli[Option, Credentials, String] = Kleisli {
+    case Token(AuthScheme.Bearer, token) => token.some
+    case _ => none[String]
+  }
+
+  private def validate: Kleisli[Option, String, Unit] = Kleisli { token =>
+    Jwt.isValid(token, secret, List(JwtAlgorithm.HS256)).guard[Option]
+  }
 
 }

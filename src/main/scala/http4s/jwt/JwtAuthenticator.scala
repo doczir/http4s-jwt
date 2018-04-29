@@ -31,9 +31,9 @@ trait JwtAuthenticator {
   }
 
   def extractJwtToken[F[_] : Monad : MonadError[?[_], Throwable]](req: Request[F]): F[String] =
-      (getCredentials[F] andThen getEncodedJwtToken).apply(req)
+      (getCredentials andThen getEncodedJwtToken).apply(req)
         .map(_.pure[F])
-        .getOrElse(MonadError[F, Throwable].raiseError(new IllegalStateException("JWT Token Invalid")))
+        .getOrElse(MonadError[F, Throwable].raiseError(new IllegalStateException("Missing JWT Token")))
         .flatMap(decodeToken.run)
 
   private def decodeToken[F[_] : MonadError[?[_], Throwable]]: Kleisli[F, String, String] = Kleisli { token =>

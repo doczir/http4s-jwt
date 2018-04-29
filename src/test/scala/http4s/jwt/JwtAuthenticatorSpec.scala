@@ -8,11 +8,13 @@ import org.http4s.dsl.Http4sDsl
 import org.http4s.headers.Authorization
 import org.http4s.{AuthScheme, HttpService, Request, Status}
 import org.scalatest.{EitherValues, Inside, Matchers, WordSpec}
+import pdi.jwt.exceptions.JwtEmptySignatureException
 import pdi.jwt.{Jwt, JwtAlgorithm, JwtClaim}
 
 class JwtAuthenticatorSpec extends WordSpec with Matchers with JwtAuthenticator with Inside with EitherValues {
 
   val idHttp4sDsl = Http4sDsl[Id]
+
   import idHttp4sDsl._
 
   trait ServiceScope {
@@ -73,6 +75,27 @@ class JwtAuthenticatorSpec extends WordSpec with Matchers with JwtAuthenticator 
         val extractedToken = extractJwtToken[IO](request).unsafeRunSync()
         val decodedOriginalToken = Jwt.decode(token, Config.jwtConfig.secret, List(JwtAlgorithm.HS256)).get
         decodedOriginalToken shouldEqual extractedToken
+      }
+
+      "using no jwt token" should {
+        "returns a failed context" in {
+          val request = Request[IO]()
+
+          assertThrows[IllegalStateException] {
+            extractJwtToken[IO](request).unsafeRunSync()
+          }
+        }
+      }
+
+      "using wrong jwt token" should {
+        "returns a failed context" in {
+          val token = Jwt.encode(JwtClaim())
+          val request = Request[IO]().putHeaders(Authorization(Token(AuthScheme.Bearer, token)))
+
+          assertThrows[JwtEmptySignatureException] {
+            extractJwtToken[IO](request).unsafeRunSync()
+          }
+        }
       }
     }
   }

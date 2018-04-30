@@ -33,13 +33,13 @@ trait JwtAuthenticator {
   def extractJwtToken[F[_] : Monad : MonadError[?[_], Throwable]](req: Request[F]): F[String] =
       (getCredentials andThen getEncodedJwtToken).apply(req)
         .map(_.pure[F])
-        .getOrElse(MonadError[F, Throwable].raiseError(new IllegalStateException("Missing JWT Token")))
+        .getOrElse(MonadError[F, Throwable].raiseError(JwtAuthenticationError("Missing JWT token in headers.")))
         .flatMap(decodeToken.run)
 
   private def decodeToken[F[_] : MonadError[?[_], Throwable]]: Kleisli[F, String, String] = Kleisli { token =>
     Jwt.decode(token, secret, List(JwtAlgorithm.HS256)) match {
       case Success(decodedToken) => decodedToken.pure[F]
-      case Failure(error) => MonadError[F, Throwable].raiseError(error)
+      case Failure(error) => MonadError[F, Throwable].raiseError(JwtAuthenticationError("JWT validation failed.", error))
     }
   }
 

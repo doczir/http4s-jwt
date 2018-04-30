@@ -2,13 +2,14 @@ package http4s.jwt
 
 import cats.Id
 import cats.effect.IO
+import cats.instances.either._
+import io.circe.{Decoder, Json}
 import io.circe.parser._
 import org.http4s.Credentials.Token
 import org.http4s.dsl.Http4sDsl
 import org.http4s.headers.Authorization
 import org.http4s.{AuthScheme, HttpService, Request, Status}
 import org.scalatest.{EitherValues, Inside, Matchers, WordSpec}
-import pdi.jwt.exceptions.JwtEmptySignatureException
 import pdi.jwt.{Jwt, JwtAlgorithm, JwtClaim}
 
 class JwtAuthenticatorSpec extends WordSpec with Matchers with JwtAuthenticator with Inside with EitherValues {
@@ -17,15 +18,19 @@ class JwtAuthenticatorSpec extends WordSpec with Matchers with JwtAuthenticator 
 
   import idHttp4sDsl._
 
-  trait ServiceScope {
+  class DummyService {
+    var called = false
 
-    var wasCalled = false
-
-    val dummyService: HttpService[Id] = HttpService[Id] {
+    val service: HttpService[Id] = HttpService[Id] {
       case _ =>
-        wasCalled = true
+        called = true
         NoContent()
     }
+  }
+
+  trait ServiceScope {
+
+    val dummyService = new DummyService()
 
   }
 
@@ -33,11 +38,11 @@ class JwtAuthenticatorSpec extends WordSpec with Matchers with JwtAuthenticator 
     "using no jwt token" should {
       "return Unauthorized" in new ServiceScope {
         val request = Request[Id]()
-        val authenticatedService = jwtAuthenticate(dummyService)
+        val authenticatedService = jwtAuthenticate(dummyService.service)
         val response = authenticatedService.orNotFound.run(request)
 
-        response.status shouldEqual Status.Unauthorized
-        wasCalled should not be true
+        response.status should === (Status.Unauthorized)
+        dummyService should not be 'called
       }
     }
 
@@ -45,11 +50,11 @@ class JwtAuthenticatorSpec extends WordSpec with Matchers with JwtAuthenticator 
       "return NoContent" in new ServiceScope {
         val token = generateToken()
         val request = Request[Id]().putHeaders(Authorization(Token(AuthScheme.Bearer, token)))
-        val authenticatedService = jwtAuthenticate(dummyService)
+        val authenticatedService = jwtAuthenticate(dummyService.service)
         val response = authenticatedService.orNotFound.run(request)
 
-        response.status shouldEqual Status.NoContent
-        wasCalled shouldBe true
+        response.status should === (Status.NoContent)
+        dummyService shouldBe 'called
       }
     }
 
@@ -57,11 +62,11 @@ class JwtAuthenticatorSpec extends WordSpec with Matchers with JwtAuthenticator 
       "return NoContent" in new ServiceScope {
         val token = Jwt.encode(JwtClaim())
         val request = Request[Id]().putHeaders(Authorization(Token(AuthScheme.Bearer, token)))
-        val authenticatedService = jwtAuthenticate(dummyService)
+        val authenticatedService = jwtAuthenticate(dummyService.service)
         val response = authenticatedService.orNotFound.run(request)
 
-        response.status shouldEqual Status.Unauthorized
-        wasCalled shouldBe false
+        response.status should === (Status.Unauthorized)
+        dummyService should not be 'called
       }
     }
   }
@@ -74,27 +79,24 @@ class JwtAuthenticatorSpec extends WordSpec with Matchers with JwtAuthenticator 
 
         val extractedToken = extractJwtToken[IO](request).unsafeRunSync()
         val decodedOriginalToken = Jwt.decode(token, Config.jwtConfig.secret, List(JwtAlgorithm.HS256)).get
-        decodedOriginalToken shouldEqual extractedToken
+
+        decodedOriginalToken should === (extractedToken)
       }
 
       "using no jwt token" should {
         "returns a failed context" in {
-          val request = Request[IO]()
+          val request = Request[Either[Throwable, ?]]()
 
-          assertThrows[IllegalStateException] {
-            extractJwtToken[IO](request).unsafeRunSync()
-          }
+          extractJwtToken(request).left.value shouldBe a[JwtAuthenticationError]
         }
       }
 
       "using wrong jwt token" should {
         "returns a failed context" in {
           val token = Jwt.encode(JwtClaim())
-          val request = Request[IO]().putHeaders(Authorization(Token(AuthScheme.Bearer, token)))
+          val request = Request[Either[Throwable, ?]]().putHeaders(Authorization(Token(AuthScheme.Bearer, token)))
 
-          assertThrows[JwtEmptySignatureException] {
-            extractJwtToken[IO](request).unsafeRunSync()
-          }
+          extractJwtToken(request).left.value shouldBe a[JwtAuthenticationError]
         }
       }
     }
@@ -107,10 +109,13 @@ class JwtAuthenticatorSpec extends WordSpec with Matchers with JwtAuthenticator 
 
         inside(Jwt.decode(token, Config.jwtConfig.secret, List(JwtAlgorithm.HS256)).toEither.flatMap(parse)) {
           case Right(tokenJson) =>
-            tokenJson.hcursor.downField("exp").as[Long].right.value
+            shouldHaveKey[Long](tokenJson, "exp")
         }
       }
     }
   }
 
+  private def shouldHaveKey[T: Decoder](tokenJson: Json, exp: String) = {
+    tokenJson.hcursor.downField(exp).as[T].right.value
+  }
 }

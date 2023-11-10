@@ -64,7 +64,7 @@ libraryDependencies ++= {
     "org.scalatest"         %% "scalatest"    % scalaTestV % "test",
     "com.pauldijou"         %% "jwt-core"     % "0.14.1",
     "org.http4s"            %% "http4s-dsl"   % http4sV,
-    "com.github.pureconfig" %% "pureconfig"   % "0.9.1",
+    "com.github.pureconfig" %% "pureconfig"   % "0.17.4",
     "io.circe"              %% "circe-core"   % circeV,
     "io.circe"              %% "circe-parser" % circeV
   )

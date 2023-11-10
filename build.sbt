@@ -1,4 +1,4 @@
-val scalaV = "2.12.4"
+val scalaV = "2.12.18"
 
 name := "http4s-jwt"
 version := "0.1.0"

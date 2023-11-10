@@ -56,7 +56,7 @@ scalacOptions ++= Seq(
 scalacOptions in (Compile, console) --= Seq("-Ywarn-unused:imports", "-Xfatal-warnings")
 
 libraryDependencies ++= {
-  val scalaTestV = "3.0.4"
+  val scalaTestV = "3.2.17"
   val http4sV    = "0.23.23"
   val circeV     = "0.14.6"
 

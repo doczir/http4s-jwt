@@ -4,7 +4,7 @@ module.exports = {
     gitAuthor: 'Renovate Bot <bot@renovateapp.com>',
     onboarding: true,
     platform: 'github',
-    includeForks: false,
+    forkProcessing: 'disabled',
     dryRun: 'full',
     repositories: ['doczir/http4s-jwt'],
     packageRules: [
@@ -19,7 +19,7 @@ module.exports = {
                 'lockFileMaintenance',
             ],
             dependencyDashboardApproval: false,
-            stabilityDays: 0,
-        },
-    ],
+            minimumReleaseAge: null,
+        }
+    ]
 };

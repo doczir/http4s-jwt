@@ -62,7 +62,7 @@ libraryDependencies ++= {
 
   Seq(
     "org.scalatest"         %% "scalatest"    % scalaTestV % "test",
-    "com.pauldijou"         %% "jwt-core"     % "0.14.1",
+    "com.pauldijou"         %% "jwt-core"     % "0.19.0",
     "org.http4s"            %% "http4s-dsl"   % http4sV,
     "com.github.pureconfig" %% "pureconfig"   % "0.17.4",
     "io.circe"              %% "circe-core"   % circeV,

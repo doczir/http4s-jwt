@@ -5,7 +5,6 @@ module.exports = {
     onboarding: true,
     platform: 'github',
     forkProcessing: 'disabled',
-    dryRun: 'full',
     repositories: ['doczir/http4s-jwt'],
     packageRules: [
         {

@@ -74,6 +74,6 @@ scalaVersion in ThisBuild := scalaV
 
 resolvers += Resolver.sonatypeRepo("releases")
 
-addCompilerPlugin("org.spire-math" %% "kind-projector" % "0.9.6")
+addCompilerPlugin("org.spire-math" %% "kind-projector" % "0.9.10")
 
 publishTo := Some(Resolver.file("releases", new File("releases")))
